@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOLVO | Career OS 6.0</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React Engine -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- 3. Babel Translator -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Fonts: Inter (The standard for UI design - clean, legible, premium) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: smooth; }
+        
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        
+        .animate-fade-in-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Activity Rings Animation */
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
+        }
+        .ring-path {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: dash 1.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-[#F2F2F7] text-[#1D1D1F] overflow-x-hidden selection:bg-blue-500 selection:text-white">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- CUSTOM ICONS ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const icons = {
+            Layout: <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />,
+            Compass: <><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+            TrendingUp: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>,
+            CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
+            Play: <polygon points="5 3 19 12 5 21 5 3"/>,
+            Search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+            Bell: <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>,
+            Menu: <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>,
+            ArrowRight: <><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>,
+            Lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+            Database: <><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>,
+            More: <><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></>,
+            Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+            Layers: <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>
+        };
+
+        const Logo = () => (
+            <div className="flex items-center gap-2 font-bold text-xl tracking-tight cursor-pointer">
+                <div className="relative w-8 h-8 flex flex-wrap gap-0.5">
+                    <div className="w-3.5 h-3.5 bg-[#FF3B30] rounded-sm"></div>
+                    <div className="w-3.5 h-3.5 bg-[#007AFF] rounded-tr-lg rounded-sm"></div>
+                    <div className="w-3.5 h-3.5 bg-[#FFCC00] rounded-bl-lg rounded-sm"></div>
+                    <div className="w-3.5 h-3.5 bg-[#34C759] rounded-sm"></div>
+                </div>
+                <span className="font-extrabold text-slate-800">SOLVO</span>
+            </div>
+        );
+
+        // --- WIDGETS ---
+
+        // 1. Apple Watch Style Activity Rings
+        const ActivityRings = () => (
+            <div className="relative w-32 h-32 flex items-center justify-center">
+                {/* Red Ring (Outer) */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                    <circle cx="64" cy="64" r="60" stroke="#FFE2E2" strokeWidth="8" fill="none" />
+                    <circle cx="64" cy="64" r="60" stroke="#FF3B30" strokeWidth="8" fill="none" strokeDasharray="377" strokeDashoffset="100" strokeLinecap="round" className="ring-path" style={{animationDelay:'0.1s'}} />
+                </svg>
+                {/* Green Ring (Middle) */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90 scale-75">
+                    <circle cx="64" cy="64" r="60" stroke="#DCFCE7" strokeWidth="10" fill="none" />
+                    <circle cx="64" cy="64" r="60" stroke="#34C759" strokeWidth="10" fill="none" strokeDasharray="377" strokeDashoffset="150" strokeLinecap="round" className="ring-path" style={{animationDelay:'0.3s'}} />
+                </svg>
+                {/* Blue Ring (Inner) */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90 scale-50">
+                    <circle cx="64" cy="64" r="60" stroke="#DBEAFE" strokeWidth="14" fill="none" />
+                    <circle cx="64" cy="64" r="60" stroke="#007AFF" strokeWidth="14" fill="none" strokeDasharray="377" strokeDashoffset="80" strokeLinecap="round" className="ring-path" style={{animationDelay:'0.5s'}} />
+                </svg>
+                <div className="absolute font-bold text-xs text-slate-400">DAILY</div>
+            </div>
+        );
+
+        // 2. Monday.com Style Status Pill
+        const StatusPill = ({ status }) => {
+            const styles = {
+                'Done': 'bg-[#00C875] hover:bg-[#00B669]',
+                'Stuck': 'bg-[#E2445C] hover:bg-[#D13950]',
+                'Working on it': 'bg-[#FDAB3D] hover:bg-[#E89830]',
+                'Review': 'bg-[#007AFF] hover:bg-[#0069D9]'
+            };
+            return (
+                <div className={`${styles[status] || 'bg-gray-400'} text-white text-[10px] font-bold px-3 py-1.5 rounded-md w-28 text-center cursor-pointer transition-colors shadow-sm`}>
+                    {status.toUpperCase()}
+                </div>
+            );
+        };
+
+        // --- MAIN COMPONENT ---
+
+        const App = () => {
+            const [isScrolled, setIsScrolled] = useState(false);
+            const [activeTab, setActiveTab] = useState('board');
+
+            useEffect(() => {
+                const handleScroll = () => setIsScrolled(window.scrollY > 20);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            return (
+                <div className="min-h-screen relative bg-[#F2F2F7]">
+                    
+                    {/* Background Gradients (Subtle Apple/Mesh Gradient) */}
+                    <div className="fixed inset-0 z-0 pointer-events-none">
+                        <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-blue-400/10 rounded-full blur-[120px]"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-purple-400/10 rounded-full blur-[120px]"></div>
+                    </div>
+
+                    {/* --- NAVIGATION --- */}
+                    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200/50 py-3' : 'py-6'}`}>
+                        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+                            <Logo />
+                            <div className="hidden md:flex bg-slate-100/50 p-1 rounded-full border border-slate-200/50 backdrop-blur-sm">
+                                {['Features', 'Methodology', 'Pricing'].map(item => (
+                                    <a key={item} href={`#${item.toLowerCase()}`} className="px-5 py-2 text-sm font-medium text-slate-600 rounded-full hover:bg-white hover:text-black hover:shadow-sm transition-all">
+                                        {item}
+                                    </a>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button className="text-sm font-semibold text-slate-600 hover:text-black px-4 py-2">Log In</button>
+                                <button className="bg-black text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg active:scale-95">Get Started</button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* --- HERO SECTION --- */}
+                    <section className="pt-40 pb-20 px-6 relative z-10">
+                        <div className="max-w-7xl mx-auto text-center">
+                            <div className="inline-block mb-6 animate-fade-in-up">
+                                <span className="bg-gradient-to-r from-blue-500 to-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg shadow-blue-500/30">
+                                    SOLVO OS 6.0
+                                </span>
+                            </div>
+                            
+                            <h1 className="text-5xl md:text-8xl font-bold tracking-tight text-[#1D1D1F] mb-8 leading-[1.05] animate-fade-in-up" style={{animationDelay: '0.1s'}}>
+                                Your Career. <br/>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">Sync Complete.</span>
+                            </h1>
+                            
+                            <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-12 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                                Manage your growth like a product. A unified OS combining psychometrics, market data, and execution tools.
+                            </p>
+
+                            {/* --- THE OS INTERFACE --- */}
+                            <div className="relative mx-auto max-w-6xl animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+                                
+                                {/* Device Frame (iPad Pro / Mac style) */}
+                                <div className="bg-white rounded-[2rem] shadow-[0_50px_100px_-20px_rgba(50,50,93,0.15)] border-[6px] border-[#1D1D1F] overflow-hidden aspect-[16/10] md:aspect-[16/9] relative">
+                                    
+                                    {/* Camera/Notch */}
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 h-6 w-32 bg-[#1D1D1F] rounded-b-2xl z-50"></div>
+
+                                    <div className="flex h-full bg-[#F5F5F7]">
+                                        
+                                        {/* Sidebar (Mac/iPad style) */}
+                                        <div className="w-64 bg-[#F2F2F7]/80 backdrop-blur-xl border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col p-4 pt-10">
+                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-3">Apps</div>
+                                            
+                                            <div className="space-y-1">
+                                                <button onClick={() => setActiveTab('board')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'board' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:bg-black/5'}`}>
+                                                    <div className="bg-blue-500 text-white p-1 rounded-md"><Icon path={icons.Layout} size={14} /></div>
+                                                    Dashboard
+                                                </button>
+                                                <button onClick={() => setActiveTab('psych')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'psych' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:bg-black/5'}`}>
+                                                    <div className="bg-yellow-500 text-white p-1 rounded-md"><Icon path={icons.Compass} size={14} /></div>
+                                                    Psychometrics
+                                                </button>
+                                                <button onClick={() => setActiveTab('market')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'market' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:bg-black/5'}`}>
+                                                    <div className="bg-green-500 text-white p-1 rounded-md"><Icon path={icons.TrendingUp} size={14} /></div>
+                                                    Market Data
+                                                </button>
+                                                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-black/5 transition-colors">
+                                                    <div className="bg-red-500 text-white p-1 rounded-md"><Icon path={icons.Play} size={14} /></div>
+                                                    Library
+                                                </button>
+                                            </div>
+
+                                            <div className="mt-auto">
+                                                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center text-white text-xs font-bold">JD</div>
+                                                        <div className="text-xs">
+                                                            <div className="font-bold text-slate-900">John Doe</div>
+                                                            <div className="text-slate-500">Pro Plan</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Content */}
+                                        <div className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+                                            {/* Header */}
+                                            <div className="flex justify-between items-center mb-8 pt-4">
+                                                <div>
+                                                    <h2 className="text-2xl font-bold text-slate-900">Good Morning</h2>
+                                                    <p className="text-slate-500 text-sm">Here's your career trajectory for today.</p>
+                                                </div>
+                                                <div className="flex gap-4">
+                                                    <div className="relative">
+                                                        <Icon path={icons.Bell} className="text-slate-400 hover:text-slate-600 cursor-pointer" />
+                                                        <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
+                                                    </div>
+                                                    <Icon path={icons.Search} className="text-slate-400 hover:text-slate-600 cursor-pointer" />
+                                                </div>
+                                            </div>
+
+                                            {/* --- BENTO GRID LAYOUT --- */}
+                                            {activeTab === 'board' && (
+                                                <div className="grid grid-cols-12 gap-6 animate-fade-in-up">
+                                                    
+                                                    {/* Large Card: The Board (Monday.com style) */}
+                                                    <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                                                        <div className="flex justify-between items-center mb-6">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Icon path={icons.Layers} size={18} /></div>
+                                                                <h3 className="font-bold text-slate-800">Active Sprint</h3>
+                                                            </div>
+                                                            <Icon path={icons.More} className="text-slate-400" />
+                                                        </div>
+
+                                                        {/* Headers */}
+                                                        <div className="grid grid-cols-12 gap-4 text-[10px] uppercase font-bold text-slate-400 mb-3 px-2">
+                                                            <div className="col-span-6">Item</div>
+                                                            <div className="col-span-3 text-center">Status</div>
+                                                            <div className="col-span-3 text-center">People</div>
+                                                        </div>
+
+                                                        {/* Row 1 */}
+                                                        <div className="grid grid-cols-12 gap-4 items-center p-2 hover:bg-slate-50 rounded-xl transition-colors mb-1 group cursor-pointer">
+                                                            <div className="col-span-6 flex items-center gap-3">
+                                                                <div className="w-1.5 h-8 bg-blue-500 rounded-full"></div>
+                                                                <span className="text-sm font-medium text-slate-700">Master Next.js App Router</span>
+                                                            </div>
+                                                            <div className="col-span-3 flex justify-center"><StatusPill status="Working on it" /></div>
+                                                            <div className="col-span-3 flex justify-center">
+                                                                <div className="w-6 h-6 bg-black rounded-full border-2 border-white"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Row 2 */}
+                                                        <div className="grid grid-cols-12 gap-4 items-center p-2 hover:bg-slate-50 rounded-xl transition-colors mb-1 group cursor-pointer">
+                                                            <div className="col-span-6 flex items-center gap-3">
+                                                                <div className="w-1.5 h-8 bg-green-500 rounded-full"></div>
+                                                                <span className="text-sm font-medium text-slate-700">Submit Portfolio Site</span>
+                                                            </div>
+                                                            <div className="col-span-3 flex justify-center"><StatusPill status="Done" /></div>
+                                                            <div className="col-span-3 flex justify-center">
+                                                                <div className="w-6 h-6 bg-black rounded-full border-2 border-white"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Row 3 */}
+                                                        <div className="grid grid-cols-12 gap-4 items-center p-2 hover:bg-slate-50 rounded-xl transition-colors mb-1 group cursor-pointer">
+                                                            <div className="col-span-6 flex items-center gap-3">
+                                                                <div className="w-1.5 h-8 bg-red-500 rounded-full"></div>
+                                                                <span className="text-sm font-medium text-slate-700">AWS Certification Exam</span>
+                                                            </div>
+                                                            <div className="col-span-3 flex justify-center"><StatusPill status="Stuck" /></div>
+                                                            <div className="col-span-3 flex justify-center">
+                                                                <div className="w-6 h-6 bg-black rounded-full border-2 border-white"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Side Card: Stats (Wear OS style) */}
+                                                    <div className="col-span-12 lg:col-span-4 bg-black text-white rounded-3xl p-6 shadow-xl flex flex-col items-center justify-center relative overflow-hidden group">
+                                                        {/* Abstract background */}
+                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 blur-[60px] opacity-40"></div>
+                                                        <div className="relative z-10 mb-4">
+                                                            <ActivityRings />
+                                                        </div>
+                                                        <div className="text-center z-10">
+                                                            <h4 className="text-lg font-bold">Productivity Score</h4>
+                                                            <p className="text-gray-400 text-sm">Top 5% of users today</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Bottom Card: Resource (Trello/Card style) */}
+                                                    <div className="col-span-12 md:col-span-6 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <div className="flex gap-2">
+                                                                <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded">YOUTUBE</span>
+                                                                <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded">45 MIN</span>
+                                                            </div>
+                                                            <Icon path={icons.More} className="text-slate-400" />
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">Advanced System Design Interview Guide</h4>
+                                                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                            <div className="bg-red-500 w-[35%] h-full"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Bottom Card: Market (Trello/Card style) */}
+                                                    <div className="col-span-12 md:col-span-6 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <div className="flex gap-2">
+                                                                <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-1 rounded">MARKET</span>
+                                                                <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded">LIVE</span>
+                                                            </div>
+                                                            <Icon path={icons.TrendingUp} className="text-green-500 w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex items-end gap-2">
+                                                            <h4 className="text-3xl font-extrabold text-slate-900">+24%</h4>
+                                                            <span className="text-sm text-slate-500 mb-1">Salary Growth</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 mt-2">For "Full Stack Engineers" in Q1 2024</p>
+                                                    </div>
+
+                                                </div>
+                                            )}
+
+                                            {/* Dock (Floating bottom bar like macOS) */}
+                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl px-4 py-3 flex gap-4 items-end z-20 hover:scale-105 transition-transform duration-300">
+                                                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30 cursor-pointer hover:-translate-y-2 transition-transform">
+                                                    <Icon path={icons.Layout} size={20} />
+                                                </div>
+                                                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-yellow-400/30 cursor-pointer hover:-translate-y-2 transition-transform">
+                                                    <Icon path={icons.Compass} size={20} />
+                                                </div>
+                                                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 cursor-pointer hover:-translate-y-2 transition-transform">
+                                                    <Icon path={icons.TrendingUp} size={20} />
+                                                </div>
+                                                <div className="w-1px h-8 bg-slate-300 mx-1"></div>
+                                                <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white shadow-lg cursor-pointer hover:-translate-y-2 transition-transform">
+                                                    <Icon path={icons.Menu} size={20} />
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* --- FEATURES GRID --- */}
+                    <section id="features" className="py-24 bg-white relative">
+                        <div className="max-w-7xl mx-auto px-6">
+                            <div className="text-center mb-16">
+                                <h2 className="text-4xl font-extrabold text-slate-900 mb-4">The Quad-Core Engine</h2>
+                                <p className="text-slate-500">Four systems. One OS.</p>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 hover:shadow-lg hover:scale-[1.02] transition-all">
+                                    <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-500/30">
+                                        <Icon path={icons.Layout} />
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-2 text-slate-900">Execution</h3>
+                                    <p className="text-sm text-slate-600">Kanban boards, Timelines, and Sprints. Pre-configured for speed.</p>
+                                </div>
+                                <div className="p-6 bg-yellow-50 rounded-3xl border border-yellow-100 hover:shadow-lg hover:scale-[1.02] transition-all">
+                                    <div className="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-yellow-400/30">
+                                        <Icon path={icons.Compass} />
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-2 text-slate-900">Discovery</h3>
+                                    <p className="text-sm text-slate-600">Psychometric mapping to find your 99% career fit.</p>
+                                </div>
+                                <div className="p-6 bg-green-50 rounded-3xl border border-green-100 hover:shadow-lg hover:scale-[1.02] transition-all">
+                                    <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-green-500/30">
+                                        <Icon path={icons.TrendingUp} />
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-2 text-slate-900">Market</h3>
+                                    <p className="text-sm text-slate-600">Live data integration with LinkedIn & O*NET.</p>
+                                </div>
+                                <div className="p-6 bg-red-50 rounded-3xl border border-red-100 hover:shadow-lg hover:scale-[1.02] transition-all">
+                                    <div className="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-red-500/30">
+                                        <Icon path={icons.Database} />
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-2 text-slate-900">Library</h3>
+                                    <p className="text-sm text-slate-600">10,000+ Curated free courses indexed by skill.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* --- FOOTER --- */}
+                    <footer className="py-12 border-t border-slate-200 bg-white">
+                        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <Logo />
+                            <div className="flex gap-6 text-sm text-slate-500 font-medium">
+                                <a href="#" className="hover:text-black transition-colors">Privacy</a>
+                                <a href="#" className="hover:text-black transition-colors">Terms</a>
+                                <a href="#" className="hover:text-black transition-colors">Twitter</a>
+                            </div>
+                            <p className="text-slate-400 text-sm">© 2024 SOLVO Systems</p>
+                        </div>
+                    </footer>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
